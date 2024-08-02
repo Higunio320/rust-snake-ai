@@ -7,12 +7,23 @@ struct Individual {
     evaluation: f64
 }
 
-struct Population {
+pub(crate) struct Population {
     individuals: Vec<Individual>,
     crossing_prob: f64,
     mutation_prob: f64,
     mutation_range: f64,
     n_of_generations: u8,
+}
+
+pub struct PopulationOptions {
+    population_size: usize,
+    number_of_chromosomes: usize,
+    gen_min_val: f64,
+    gen_max_val: f64,
+    crossing_prob: f64,
+    mutation_prob: f64,
+    mutation_range: f64,
+    n_of_generations: u8
 }
 
 impl Individual {
@@ -70,10 +81,18 @@ impl Individual {
 }
 
 impl Population {
-    pub fn new<F>(population_size: usize, number_of_chromosomes: usize, gen_min_val: f64, gen_max_val: f64,
-    crossing_prob: f64, mutation_prob: f64, mutation_range: f64, n_of_generations: u8, evaluation_function: F) -> Self
+    pub fn new<F>(population_options: PopulationOptions, evaluation_function: F) -> Self
         where
             F: Fn(&Vec<f64>) -> f64 {
+        let population_size = population_options.population_size;
+        let number_of_chromosomes = population_options.number_of_chromosomes;
+        let gen_min_val = population_options.gen_min_val;
+        let gen_max_val = population_options.gen_max_val;
+        let crossing_prob = population_options.crossing_prob;
+        let mutation_prob = population_options.mutation_prob;
+        let mutation_range = population_options.mutation_range;
+        let n_of_generations = population_options.n_of_generations;
+
         let mut individuals = Vec::with_capacity(population_size);
 
         for _ in 0..population_size {
