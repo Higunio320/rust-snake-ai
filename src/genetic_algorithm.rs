@@ -23,7 +23,23 @@ pub struct PopulationOptions {
     crossing_prob: f64,
     mutation_prob: f64,
     mutation_range: f64,
-    n_of_generations: u8
+    pub(crate) n_of_generations: u8
+}
+
+impl PopulationOptions {
+    pub fn new(population_size: usize, number_of_chromosomes: usize, gen_min_val: f64, gen_max_val: f64,
+               crossing_prob: f64, mutation_prob: f64, mutation_range: f64, n_of_generations: u8) -> Self {
+        PopulationOptions {
+            population_size,
+            number_of_chromosomes,
+            gen_min_val,
+            gen_max_val,
+            crossing_prob,
+            mutation_prob,
+            mutation_range,
+            n_of_generations
+        }
+    }
 }
 
 impl Individual {
@@ -73,17 +89,17 @@ impl Individual {
             })
     }
 
-    fn evaluate<F>(&mut self, func: &F)
+    fn evaluate<F, T>(&mut self, func: &F, args: &T)
         where
-            F: Fn(&Vec<f64>) -> f64 {
-        self.evaluation = func(&self.chromosomes);
+            F: Fn(&Vec<f64>, &T) -> f64 {
+        self.evaluation = func(&self.chromosomes, args);
     }
 }
 
 impl Population {
-    pub fn new<F>(population_options: PopulationOptions, evaluation_function: F) -> Self
+    pub fn new<F, T>(population_options: PopulationOptions, evaluation_function: F, args: &T) -> Self
         where
-            F: Fn(&Vec<f64>) -> f64 {
+            F: Fn(&Vec<f64>, &T) -> f64 {
         let population_size = population_options.population_size;
         let number_of_chromosomes = population_options.number_of_chromosomes;
         let gen_min_val = population_options.gen_min_val;
@@ -97,16 +113,16 @@ impl Population {
 
         for _ in 0..population_size {
             let mut individual = Individual::new(number_of_chromosomes, gen_min_val, gen_max_val);
-            individual.evaluate(&evaluation_function);
+            individual.evaluate(&evaluation_function, args);
             individuals.push(individual);
         }
 
         Population {individuals, crossing_prob, mutation_prob, mutation_range, n_of_generations}
     }
 
-    pub fn generate_new_population<F>(&mut self, evaluation_function: F)
+    pub fn generate_new_population<F, T>(&mut self, evaluation_function: F, args: &T)
         where
-            F: Fn(&Vec<f64>) -> f64 {
+            F: Fn(&Vec<f64>, &T) -> f64 {
         let new_population = self.selection();
 
         let mut new_population = self.cross_population(new_population);
@@ -116,7 +132,7 @@ impl Population {
 
 
         for individual in self.individuals.iter_mut() {
-            individual.evaluate(&evaluation_function)
+            individual.evaluate(&evaluation_function, args);
         }
     }
 
@@ -146,11 +162,16 @@ impl Population {
             let r: f64 = rng.gen_range(0.0..=1.0);
             let mut index = 0;
 
-            while index < self.individuals.len() && accumulated_probabilities[index] > r {
+            while index < self.individuals.len() && accumulated_probabilities[index] < r {
                 index += 1;
             }
 
-            new_population.push(self.individuals[index].clone());
+            if index < self.individuals.len() {
+                new_population.push(self.individuals[index].clone());
+            } else {
+                panic!("This shouldn't happen. r: {}, accumulated_prob: {:?}",
+                               r, accumulated_probabilities);
+            }
         }
 
         new_population
@@ -179,6 +200,22 @@ impl Population {
         individuals_not_to_cross.append(&mut crossed_individuals);
 
         individuals_not_to_cross
+    }
+
+    pub fn get_best_score(&self) -> f64 {
+        let mut evaluations: Vec<f64> = self.individuals.iter()
+            .map(|individual| individual.evaluation)
+            .collect();
+
+        evaluations.sort_by(|a, b| a.total_cmp(b));
+
+        evaluations[evaluations.len() - 1]
+    }
+
+    pub fn get_best_chromosomes(&mut self) -> Vec<f64> {
+        self.individuals.sort_by(|a, b| a.evaluation.total_cmp(&b.evaluation));
+
+        self.individuals[self.individuals.len() - 1].chromosomes.clone()
     }
 }
 

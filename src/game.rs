@@ -4,12 +4,15 @@ use ggez::conf::{WindowMode, WindowSetup};
 use ggez::glam::Vec2;
 use ggez::graphics::{Canvas, Color, Drawable, DrawParam};
 use ggez::input::keyboard::{KeyCode, KeyInput};
+use once_cell::sync::Lazy;
 use rand::rngs::ThreadRng;
 use rand::{Rng, thread_rng};
 use crate::snake_game::{Ate, Direction, Food, Position, Snake};
 
-pub const GRID_SIZE: (i16, i16) = (30, 30);
+pub const GRID_SIZE: (i16, i16) = (10, 10);
 pub const GRID_CELL_SIZE: (i16, i16) = (24, 24);
+
+pub static MAX_DISTANCE: Lazy<f64> = Lazy::new(|| ((GRID_SIZE.0.pow(2) + GRID_SIZE.1.pow(2)) as f64).sqrt());
 
 pub const SCREEN_SIZE: (f32, f32) = (
     (GRID_SIZE.0 * GRID_CELL_SIZE.0) as f32,

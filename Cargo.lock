@@ -2213,6 +2213,7 @@ version = "0.1.0"
 dependencies = [
  "ggez",
  "itertools 0.13.0",
+ "once_cell",
  "rand",
 ]
 

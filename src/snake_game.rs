@@ -1,7 +1,13 @@
 use std::collections::VecDeque;
+use std::f64::consts::FRAC_PI_4;
 use ggez::graphics::{Canvas, Color, DrawParam, Quad, Rect};
 use ggez::input::keyboard::{KeyCode};
+use once_cell::sync::Lazy;
 use crate::game::{GRID_CELL_SIZE, GRID_SIZE};
+use crate::snake_trainer::Move;
+
+static SIN_45: Lazy<f64> = Lazy::new(|| FRAC_PI_4.sin());
+static COS_45: Lazy<f64> = Lazy::new(|| FRAC_PI_4.cos());
 
 #[derive(Copy, PartialEq, Clone)]
 pub struct Position {
@@ -153,6 +159,33 @@ pub struct Snake {
     next_dir: Option<Direction>
 }
 
+pub struct Distances {
+    pub(crate) top: DistanceInfo,
+    pub(crate) right: DistanceInfo,
+    pub(crate) bottom: DistanceInfo,
+    pub(crate) left: DistanceInfo,
+    pub(crate) top_right: DistanceInfo,
+    pub(crate) bottom_right: DistanceInfo,
+    pub(crate) bottom_left: DistanceInfo,
+    pub(crate) top_left: DistanceInfo
+}
+
+pub struct DistanceInfo {
+    pub(crate) distance_to_wall: f64,
+    pub(crate) is_there_an_apple: bool,
+    pub(crate) is_there_snake: bool
+}
+
+impl From<(f64, bool, bool)> for DistanceInfo {
+    fn from(value: (f64, bool, bool)) -> Self {
+        DistanceInfo {
+            distance_to_wall: value.0,
+            is_there_an_apple: value.1,
+            is_there_snake: value.2
+        }
+    }
+}
+
 impl Snake {
     pub fn new(position: Position) -> Self {
         let mut body = VecDeque::new();
@@ -257,5 +290,104 @@ impl Snake {
             self.head.direction = new_direction
         }
     }
+
+    pub fn move_in_dir_with_move(&mut self, move_dir: Move) {
+        let direction = match move_dir {
+            Move::FORWARD => self.head.direction,
+            Move::LEFT => match self.head.direction {
+                Direction::UP => Direction::LEFT,
+                Direction::LEFT => Direction::DOWN,
+                Direction::DOWN => Direction::RIGHT,
+                Direction::RIGHT => Direction::UP
+            },
+            Move::RIGHT => match self.head.direction {
+                Direction::UP => Direction::RIGHT,
+                Direction::RIGHT => Direction::DOWN,
+                Direction::DOWN => Direction::LEFT,
+                Direction::LEFT => Direction::UP
+            }
+        };
+
+        self.move_in_dir(direction);
+    }
+
+    pub fn get_distances(&self, food: &Food) -> Distances {
+        let top_distance = self.head.position.y as f64;
+        let top_body = self.body.iter()
+            .any(|segment| segment.position.x == self.head.position.x && segment.position.y < self.head.position.y);
+        let top_apple = food.position.x == self.head.position.x && food.position.y < self.head.position.y;
+
+        let bottom_distance = (GRID_SIZE.1 - self.head.position.y) as f64;
+        let bottom_body = self.body.iter()
+            .any(|segment| segment.position.x == self.head.position.x && segment.position.y > self.head.position.y);
+        let bottom_apple = food.position.x == self.head.position.x && food.position.y < self.head.position.y;
+
+        let right_distance = (GRID_SIZE.0 - self.head.position.x) as f64;
+        let right_body = self.body.iter()
+            .any(|segment| segment.position.x > self.head.position.x && segment.position.y == self.head.position.y);
+        let right_apple = food.position.x > self.head.position.x && food.position.y == self.head.position.y;
+
+        let left_distance = self.head.position.x as f64;
+        let left_body = self.body.iter()
+            .any(|segment| segment.position.x < self.head.position.x && segment.position.y == self.head.position.y);
+        let left_apple = food.position.x < self.head.position.x && food.position.y == self.head.position.y;
+
+        let top: DistanceInfo = (top_distance, top_apple, top_body).into();
+        let bottom: DistanceInfo = (bottom_distance, bottom_apple, bottom_body).into();
+        let right: DistanceInfo = (right_distance, right_apple, right_body).into();
+        let left: DistanceInfo = (left_distance, left_apple, left_body).into();
+
+        let top_right = self.get_distance_in_direction(&food.position, top_distance, right_distance, *SIN_45, *COS_45);
+        let bottom_right = self.get_distance_in_direction(&food.position, bottom_distance, right_distance, -*SIN_45, *COS_45);
+        let bottom_left = self.get_distance_in_direction(&food.position, bottom_distance, left_distance, -*SIN_45, -*COS_45);
+        let top_left = self.get_distance_in_direction(&food.position, top_distance, left_distance, *SIN_45, -*COS_45);
+
+        Distances {
+            top,
+            bottom,
+            right,
+            left,
+            top_right,
+            bottom_right,
+            bottom_left,
+            top_left
+        }
+    }
+
+    fn get_distance_in_direction(&self, food_pos: &Position, top_bottom_dist: f64, left_right_dist: f64, vec_sin: f64, vec_cos: f64) -> DistanceInfo {
+        let distance;
+        if top_bottom_dist < left_right_dist {
+            distance = top_bottom_dist / vec_sin;
+        } else {
+            distance = left_right_dist / vec_cos;
+        }
+
+        let apple_vec = Position::new(food_pos.x - self.head.position.x, food_pos.y - self.head.position.y);
+
+        let apple = equal_with_error(apple_vec.x as f64 * vec_sin, apple_vec.y as f64 * vec_cos, 0.00001);
+
+        let body = self.body.iter()
+            .any(|segment| {
+                equal_with_error((segment.position.x - self.head.position.x) as f64 * vec_sin,
+                                 (segment.position.y - self.head.position.y) as f64 * vec_cos,
+                                 0.00001)
+            });
+
+        DistanceInfo {
+            distance_to_wall: distance,
+            is_there_an_apple: apple,
+            is_there_snake: body
+        }
+    }
+
+    pub fn get_current_direction(&self) -> Direction {
+        self.head.direction
+    }
+
+
+}
+
+fn equal_with_error(first_value: f64, second_value: f64, error: f64) -> bool {
+        return second_value >= first_value - error && second_value <= first_value + error
 }
 

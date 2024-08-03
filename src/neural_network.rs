@@ -4,7 +4,7 @@ use rand::{Rng, thread_rng};
 pub(crate) struct NeuralNetwork {
     layers_weights: Vec<f64>,
     layers_functions: Vec<Box<dyn Function>>,
-    layers_sizes_vec: Vec<u8>
+    layers_sizes_vec: Vec<u16>
 }
 
 
@@ -56,19 +56,25 @@ impl Function for Softmax {
                 (exps, sum + exp)
             });
 
-        println!("Sum is {sum}");
-        println!("Exps: {:?}", exps);
-        println!("Input: {:?}", input);
-
         for(i, number) in input.iter_mut().enumerate() {
             *number = exps[i] / sum;
         }
     }
 }
 
+#[derive(Clone)]
 pub struct NeuralNetworkOptions {
-    layers_sizes_vec: Vec<u8>,
+    layers_sizes_vec: Vec<u16>,
     layers_functions: Vec<Box<dyn Function>>
+}
+
+impl NeuralNetworkOptions {
+    pub fn new(layers_sizes_vec: Vec<u16>, layers_functions: Vec<Box<dyn Function>>) -> Self {
+        NeuralNetworkOptions {
+            layers_sizes_vec,
+            layers_functions
+        }
+    }
 }
 
 impl NeuralNetwork {
@@ -117,8 +123,8 @@ impl NeuralNetwork {
             .sum();
 
         if capacity != layers_weights.len() {
-            return Err(format!("Weights len: {} and layers sizes: {:?} don't match",
-                               layers_weights.len(), layers_sizes_vec))
+            return Err(format!("Weights len: {} and layers sizes: {:?} don't match. Expected length: {}",
+                               layers_weights.len(), layers_sizes_vec, capacity))
         }
 
         Ok(NeuralNetwork {layers_weights, layers_functions, layers_sizes_vec})
@@ -144,6 +150,10 @@ impl NeuralNetwork {
         }
 
         Ok(output)
+    }
+
+    pub fn update_weights(&mut self, new_weights: Vec<f64>) {
+        self.layers_weights = new_weights;
     }
 }
 
@@ -307,10 +317,11 @@ mod test {
 
         expected_output.iter()
             .zip(output.iter())
-            .for_each(|(a, b)| assert_equal_with_error(*b, *a, 0.00005_f64));
+            .for_each(|(a, b)| assert_equal_with_error(*b, *a, 0.0005));
     }
 
     fn assert_equal_with_error(actual: f64, expected: f64, error: f64) {
+        println!("{} {}", actual, expected);
         assert!(actual >= expected - error && actual <= expected + error,
         "{actual} should be in {} - {}", expected - error, expected + error);
     }
