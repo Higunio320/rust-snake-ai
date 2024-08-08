@@ -12,7 +12,7 @@ pub(crate) struct Population {
     crossing_prob: f64,
     mutation_prob: f64,
     mutation_range: f64,
-    n_of_generations: u8,
+    n_of_generations: u64,
 }
 
 pub struct PopulationOptions {
@@ -23,12 +23,12 @@ pub struct PopulationOptions {
     crossing_prob: f64,
     mutation_prob: f64,
     mutation_range: f64,
-    pub(crate) n_of_generations: u8
+    pub(crate) n_of_generations: u64
 }
 
 impl PopulationOptions {
     pub fn new(population_size: usize, number_of_chromosomes: usize, gen_min_val: f64, gen_max_val: f64,
-               crossing_prob: f64, mutation_prob: f64, mutation_range: f64, n_of_generations: u8) -> Self {
+               crossing_prob: f64, mutation_prob: f64, mutation_range: f64, n_of_generations: u64) -> Self {
         PopulationOptions {
             population_size,
             number_of_chromosomes,
@@ -84,7 +84,7 @@ impl Individual {
         self.chromosomes.iter_mut()
             .for_each(|item| {
                 if rng.gen_range(0.0..=1.0) < *mutation_prob {
-                    *item += rng.gen_range(-(*mutation_range)..=(*mutation_range));
+                    *item += *item * rng.gen_range(-(*mutation_range)..=(*mutation_range));
                 }
             })
     }
@@ -130,6 +130,7 @@ impl Population {
         new_population.iter_mut()
             .for_each(|individual| individual.mutate(&self.mutation_range, &self.mutation_prob));
 
+        self.individuals = new_population;
 
         for individual in self.individuals.iter_mut() {
             individual.evaluate(&evaluation_function, args);
@@ -140,6 +141,15 @@ impl Population {
         let evaluation_sum: f64 = self.individuals.iter()
             .map(|individual| individual.evaluation)
             .sum();
+
+        if evaluation_sum == 0.0 {
+            let mut new_population = self.individuals.clone();
+
+            new_population.iter_mut()
+                .for_each(|individual| individual.mutate(&self.mutation_range, &self.mutation_prob));
+
+            return new_population;
+        }
 
         let probabilities: Vec<f64> = self.individuals.iter()
             .map(|individual| individual.evaluation / evaluation_sum)
@@ -174,6 +184,9 @@ impl Population {
             }
         }
 
+        // println!("Population evals: {:?}, new population evals: {:?}", self.individuals.iter().map(|indiv| indiv.evaluation)
+        //     .collect::<Vec<f64>>(), new_population.iter().map(|indiv| indiv.evaluation).collect::<Vec<f64>>());
+
         new_population
     }
 
@@ -203,19 +216,16 @@ impl Population {
     }
 
     pub fn get_best_score(&self) -> f64 {
-        let mut evaluations: Vec<f64> = self.individuals.iter()
+        self.individuals.iter()
             .map(|individual| individual.evaluation)
-            .collect();
-
-        evaluations.sort_by(|a, b| a.total_cmp(b));
-
-        evaluations[evaluations.len() - 1]
+            .max_by(|a, b| a.total_cmp(b))
+            .unwrap_or_else(|| panic!("Couldn't find best score: self.individuals.len: {}", self.individuals.len()))
     }
 
     pub fn get_best_chromosomes(&mut self) -> Vec<f64> {
-        self.individuals.sort_by(|a, b| a.evaluation.total_cmp(&b.evaluation));
-
-        self.individuals[self.individuals.len() - 1].chromosomes.clone()
+        self.individuals.iter()
+            .max_by(|a, b| a.evaluation.total_cmp(&b.evaluation))
+            .unwrap_or_else(|| panic!("Couldn't find best individual")).chromosomes.clone()
     }
 }
 

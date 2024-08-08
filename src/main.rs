@@ -1,3 +1,4 @@
+use crate::game::play_game;
 use crate::genetic_algorithm::PopulationOptions;
 use crate::neural_network::{NeuralNetworkOptions, ReLU, Softmax};
 use crate::snake_trainer::{FIRST_LAYER_SIZE, MLSnakeOptions, SnakeTrainer};
@@ -11,19 +12,19 @@ mod ml_game;
 
 fn main() {
     let population_options = PopulationOptions::new(
-        200,
-        836,
+        500,
+        1216,
         -1.0,
         1.0,
         0.7,
-        0.001,
-        0.1,
-        100
+        0.3,
+        0.5,
+        500
     );
 
     let neural_network_options = NeuralNetworkOptions::new(
-        vec![FIRST_LAYER_SIZE as u16, 20, 12, 3],
-        vec![Box::new(ReLU), Box::new(ReLU), Box::new(Softmax)]
+        vec![FIRST_LAYER_SIZE as u16, 24, 16, 8, 4],
+        vec![Box::new(ReLU), Box::new(ReLU), Box::new(ReLU), Box::new(Softmax)]
     );
 
     SnakeTrainer::train(MLSnakeOptions::new(population_options, neural_network_options));

@@ -10,7 +10,7 @@ use rand::{Rng, thread_rng};
 use crate::snake_game::{Ate, Direction, Food, Position, Snake};
 
 pub const GRID_SIZE: (i16, i16) = (10, 10);
-pub const GRID_CELL_SIZE: (i16, i16) = (24, 24);
+pub const GRID_CELL_SIZE: (i16, i16) = (48, 48);
 
 pub static MAX_DISTANCE: Lazy<f64> = Lazy::new(|| ((GRID_SIZE.0.pow(2) + GRID_SIZE.1.pow(2)) as f64).sqrt());
 
@@ -19,7 +19,7 @@ pub const SCREEN_SIZE: (f32, f32) = (
     (GRID_SIZE.1 * GRID_CELL_SIZE.1) as f32
 );
 
-pub const FPS: u32 = 8;
+pub const FPS: u32 = 4                  ;
 struct SnakeGameState {
     snake: Snake,
     food: Food,

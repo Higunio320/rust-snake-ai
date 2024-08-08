@@ -1,9 +1,9 @@
-use std::sync::{Arc, Mutex};
 use ggez::event::EventHandler;
 use ggez::{Context, ContextBuilder, event, GameError, GameResult, graphics};
 use ggez::conf::{WindowMode, WindowSetup};
 use ggez::glam::Vec2;
 use ggez::graphics::{Canvas, Color, DrawParam};
+use ggez::input::keyboard::{KeyCode, KeyInput};
 use rand::prelude::ThreadRng;
 use rand::thread_rng;
 use crate::game::{FPS, SCREEN_SIZE};
@@ -20,8 +20,7 @@ struct MLSnakeGameState {
     rng: ThreadRng,
     neural_network: NeuralNetwork,
     current_score: u16,
-    max_steps: u8,
-    current_steps: u8
+    stop: bool
 }
 
 impl MLSnakeGameState {
@@ -30,7 +29,7 @@ impl MLSnakeGameState {
 
         let rng = thread_rng();
 
-        let current_game_index: usize = 0;
+        let current_game_index = (0.95 * weights.len() as f64) as usize;
 
         let neural_network = NeuralNetwork::new_with_weights(weights[0].clone(), neural_network_options).unwrap();
 
@@ -40,9 +39,6 @@ impl MLSnakeGameState {
 
         let current_score = 0_u16;
 
-        let max_steps = 30_u8;
-
-        let current_steps = 0_u8;
 
         MLSnakeGameState {
             snake,
@@ -53,8 +49,7 @@ impl MLSnakeGameState {
             current_game_index,
             weights,
             current_score,
-            max_steps,
-            current_steps
+            stop: false
         }
     }
 }
@@ -62,8 +57,7 @@ impl MLSnakeGameState {
 impl EventHandler<GameError> for MLSnakeGameState {
     fn update(&mut self, ctx: &mut Context) -> Result<(), GameError> {
         while ctx.time.check_update_time(FPS) {
-            if !self.game_over && self.current_steps < self.max_steps {
-                self.current_steps += 1;
+            if !self.game_over && !self.stop {
 
                 let input = generate_network_input(&self.snake, &self.food);
 
@@ -71,7 +65,7 @@ impl EventHandler<GameError> for MLSnakeGameState {
 
                 let move_dir = interpret_network_output(&output);
 
-                self.snake.move_in_dir_with_move(move_dir);
+                self.snake.move_in_dir(move_dir);
 
                 self.snake.update_state(&self.food);
 
@@ -86,7 +80,6 @@ impl EventHandler<GameError> for MLSnakeGameState {
                 }
             } else {
                 if self.current_game_index < self.weights.len() {
-                    self.current_steps = 0;
 
                     let snake_pos = generate_random_position();
 
@@ -103,6 +96,7 @@ impl EventHandler<GameError> for MLSnakeGameState {
                     self.food = food;
 
                     self.game_over = false;
+                    self.stop = false;
                 } else {
                     ctx.request_quit();
                 }
@@ -132,6 +126,17 @@ impl EventHandler<GameError> for MLSnakeGameState {
         canvas.finish(ctx)?;
 
         ggez::timer::yield_now();
+
+        Ok(())
+    }
+
+    fn key_down_event(&mut self, ctx: &mut Context, input: KeyInput, _repeated: bool) -> Result<(), GameError> {
+        if let Some(code) = input.keycode {
+            match code {
+                KeyCode::Right => self.stop = true,
+                _ => {}
+            }
+        };
 
         Ok(())
     }
