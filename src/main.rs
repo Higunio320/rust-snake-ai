@@ -13,18 +13,18 @@ mod ml_game;
 fn main() {
     let population_options = PopulationOptions::new(
         500,
-        1216,
+        FIRST_LAYER_SIZE * 18 + 18 * 12 + 12 * 4,
         -1.0,
         1.0,
-        0.7,
+        0.6,
         0.3,
         0.5,
-        500
+        1000
     );
 
     let neural_network_options = NeuralNetworkOptions::new(
-        vec![FIRST_LAYER_SIZE as u16, 24, 16, 8, 4],
-        vec![Box::new(ReLU), Box::new(ReLU), Box::new(ReLU), Box::new(Softmax)]
+        vec![FIRST_LAYER_SIZE as u16, 18, 12, 4],
+        vec![Box::new(ReLU), Box::new(ReLU), Box::new(Softmax)]
     );
 
     SnakeTrainer::train(MLSnakeOptions::new(population_options, neural_network_options));

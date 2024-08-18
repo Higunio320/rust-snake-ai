@@ -204,11 +204,17 @@ impl Population {
             }
         }
 
+        if individuals_to_cross.len() % 2 != 0 {
+            individuals_not_to_cross.push(individuals_to_cross[individuals_to_cross.len() - 1].clone());
+        }
+
         let mut crossed_individuals: Vec<Individual> = individuals_to_cross.into_iter()
             .tuples()
             .map(|(first, second)| first.cross(second))
             .flat_map(|(first, second)| vec![first, second])
             .collect();
+
+
 
         individuals_not_to_cross.append(&mut crossed_individuals);
 
