@@ -2215,6 +2215,7 @@ dependencies = [
  "itertools 0.13.0",
  "once_cell",
  "rand",
+ "rayon",
 ]
 
 [[package]]

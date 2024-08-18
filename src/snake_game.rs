@@ -109,12 +109,13 @@ impl Head {
 }
 
 struct Segment {
-    position: Position
+    position: Position,
+    direction: Direction
 }
 
 impl Segment {
-    pub fn new(position: Position) -> Self {
-        Segment {position}
+    pub fn new(position: Position, direction: Direction) -> Self {
+        Segment {position, direction}
     }
 
     pub fn draw(&self, canvas: &mut Canvas) {
@@ -212,7 +213,7 @@ impl Snake {
     pub fn new(position: Position) -> Self {
         let mut body = VecDeque::new();
 
-        body.push_back(Segment::new((position.x - 1, position.y).into()));
+        body.push_back(Segment::new((position.x - 1, position.y).into(), Direction::RIGHT));
         Snake {
             head: Head::new(position, Direction::RIGHT),
             last_dir: Direction::RIGHT,
@@ -264,7 +265,7 @@ impl Snake {
             self.next_dir = None
         }
 
-        self.body.push_front(Segment::new(self.head.position));
+        self.body.push_front(Segment::new(self.head.position, self.head.direction));
 
         self.head.position.make_a_move(self.head.direction);
 
@@ -446,6 +447,10 @@ impl Snake {
     pub fn get_current_direction(&self) -> Direction {
         self.head.direction
     }
+
+    pub fn get_tail_direction(&self) -> Direction {
+        self.body[self.body.len() - 1].direction
+    }
 }
 
 fn equal_with_error(first_value: f64, second_value: f64, error: f64) -> bool {
@@ -478,10 +483,10 @@ mod test {
         */
         //given
         let mut body = VecDeque::new();
-        body.push_back(Segment::new(Position::new(5, 2)));
-        body.push_back(Segment::new(Position::new(5, 3)));
-        body.push_back(Segment::new(Position::new(4, 3)));
-        body.push_back(Segment::new(Position::new(3, 3)));
+        body.push_back(Segment::new(Position::new(5, 2), Direction::LEFT));
+        body.push_back(Segment::new(Position::new(5, 3), Direction::UP));
+        body.push_back(Segment::new(Position::new(4, 3), Direction::RIGHT));
+        body.push_back(Segment::new(Position::new(3, 3), Direction::RIGHT));
 
         let snake = Snake {
             head: Head::new(Position::new(4, 2), Direction::LEFT),

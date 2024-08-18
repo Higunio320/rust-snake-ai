@@ -1,5 +1,6 @@
 use rand::{Rng, thread_rng};
 use itertools::Itertools;
+use rayon::prelude::*;
 
 #[derive(Clone, PartialEq)]
 struct Individual {
@@ -122,7 +123,8 @@ impl Population {
 
     pub fn generate_new_population<F, T>(&mut self, evaluation_function: F, args: &T)
         where
-            F: Fn(&Vec<f64>, &T) -> f64 {
+            F: Fn(&Vec<f64>, &T) -> f64 + Sync,
+            T: Sync {
         let new_population = self.selection();
 
         let mut new_population = self.cross_population(new_population);
@@ -132,9 +134,8 @@ impl Population {
 
         self.individuals = new_population;
 
-        for individual in self.individuals.iter_mut() {
-            individual.evaluate(&evaluation_function, args);
-        }
+        self.individuals.par_iter_mut()
+            .for_each(|individual| individual.evaluate(&evaluation_function, args));
     }
 
     fn selection(&self) -> Vec<Individual> {

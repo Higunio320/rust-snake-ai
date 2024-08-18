@@ -6,10 +6,10 @@ use crate::ml_game::play_game_with_ml;
 use crate::neural_network::{NeuralNetwork, NeuralNetworkOptions};
 use crate::snake_game::{Ate, Direction, DistanceInfo, Food, Position, Snake};
 
-pub const FIRST_LAYER_SIZE: usize = 28;
+pub const FIRST_LAYER_SIZE: usize = 32;
 pub const OUTPUT_LAYER_SIZE: usize = 3;
 
-const MAX_STEPS: f64 = 1000.0;
+const MAX_STEPS_WITHOUT_APPLE: f64 = 100.0;
 
 const POINTS_BASE: f64 = 2.0;
 
@@ -64,10 +64,12 @@ pub fn evaluate(chromosomes: &Vec<f64>, neural_network_options: &NeuralNetworkOp
 
     let mut game_over = false;
     let mut steps: f64 = 0.0;
+    let mut steps_without_apple = 0.0;
     let mut score: f64 = 0.0;
 
-    while !game_over && steps < MAX_STEPS {
+    while !game_over && steps_without_apple < MAX_STEPS_WITHOUT_APPLE {
         steps += 1.0;
+        steps_without_apple += 1.0;
 
         let output = neural_network.get_output(input).unwrap();
 
@@ -82,6 +84,7 @@ pub fn evaluate(chromosomes: &Vec<f64>, neural_network_options: &NeuralNetworkOp
                 Ate::Food => {
                     food = generate_new_food(&snake);
                     score += 1.0;
+                    steps_without_apple = 0.0;
                 },
                 Ate::Itself | Ate::Border => game_over = true
             }
@@ -90,9 +93,7 @@ pub fn evaluate(chromosomes: &Vec<f64>, neural_network_options: &NeuralNetworkOp
         input = generate_network_input(&snake, &food);
     }
 
-    // steps/4.0 + (POINTS_BASE.powf(score) + score.powf(2.1)*500.0) - (score.powf(1.2)*(steps/4.0).powf(1.3))
-    max_by((POINTS_BASE.powf(score) + score.powf(2.1)*500.0) - (score.powf(1.2)*(steps / 4.0).powf(1.3)), 0.0, |a, b| a.total_cmp(b))
-    //SPRÓBUJ ZE ZMIANĄ WYJŚĆ NA 4 JAK NA FILMIE - PO 1 NA STRONĘ, SIEĆ MOŻE MIEĆ PROBLEM Z UZALEŻNIENIEM SKRĘTU OD AKTUALNEGO KIERUNKU
+    max_by(steps + (POINTS_BASE.powf(score) + score.powf(2.1)*500.0) - (score.powf(1.2)*(steps / 4.0).powf(1.3)), 0.0, |a, b| a.total_cmp(b))
 }
 
 pub fn generate_random_position() -> Position {
@@ -134,6 +135,13 @@ pub fn generate_network_input(snake: &Snake, food: &Food) -> Vec<f64> {
     add_distance_to_input(distances.top_left, &mut input);
 
     match snake.get_current_direction() {
+        Direction::UP => input.append(&mut vec![1.0, 0.0, 0.0, 0.0]),
+        Direction::RIGHT => input.append(&mut vec![0.0, 1.0, 0.0, 0.0]),
+        Direction::DOWN => input.append(&mut vec![0.0, 0.0, 1.0, 0.0]),
+        Direction::LEFT => input.append(&mut vec![0.0, 0.0, 0.0, 1.0]),
+    }
+
+    match snake.get_tail_direction() {
         Direction::UP => input.append(&mut vec![1.0, 0.0, 0.0, 0.0]),
         Direction::RIGHT => input.append(&mut vec![0.0, 1.0, 0.0, 0.0]),
         Direction::DOWN => input.append(&mut vec![0.0, 0.0, 1.0, 0.0]),

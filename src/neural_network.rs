@@ -8,7 +8,7 @@ pub(crate) struct NeuralNetwork {
 }
 
 
-pub trait Function: Debug + FunctionClone {
+pub trait Function: Debug + FunctionClone + Sync {
     fn apply(&self, input: &mut Vec<f64>);
 }
 

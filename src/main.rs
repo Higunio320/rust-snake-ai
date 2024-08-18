@@ -13,17 +13,17 @@ mod ml_game;
 fn main() {
     let population_options = PopulationOptions::new(
         500,
-        FIRST_LAYER_SIZE * 18 + 18 * 12 + 12 * 4,
+        FIRST_LAYER_SIZE * 20 + 20 * 12 + 12 * 4,
         -1.0,
         1.0,
-        0.6,
+        0.9,
+        0.05,
         0.3,
-        0.5,
-        1000
+        2000
     );
 
     let neural_network_options = NeuralNetworkOptions::new(
-        vec![FIRST_LAYER_SIZE as u16, 18, 12, 4],
+        vec![FIRST_LAYER_SIZE as u16, 20, 12, 4],
         vec![Box::new(ReLU), Box::new(ReLU), Box::new(Softmax)]
     );
 

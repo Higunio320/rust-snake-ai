@@ -19,7 +19,7 @@ pub const SCREEN_SIZE: (f32, f32) = (
     (GRID_SIZE.1 * GRID_CELL_SIZE.1) as f32
 );
 
-pub const FPS: u32 = 4                  ;
+pub const FPS: u32 = 10;
 struct SnakeGameState {
     snake: Snake,
     food: Food,
