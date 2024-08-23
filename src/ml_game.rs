@@ -1,14 +1,16 @@
+use std::fmt::format;
 use ggez::event::EventHandler;
 use ggez::{Context, ContextBuilder, event, GameError, GameResult, graphics};
 use ggez::conf::{WindowMode, WindowSetup};
 use ggez::glam::Vec2;
-use ggez::graphics::{Canvas, Color, DrawParam};
+use ggez::graphics::{Canvas, Color, DrawParam, FontData, Mesh};
 use ggez::input::keyboard::{KeyCode, KeyInput};
+use ggez::mint::Point2;
 use rand::prelude::ThreadRng;
 use rand::thread_rng;
-use crate::game::{FPS, SCREEN_SIZE};
+use crate::game::{FPS, GAME_SCREEN_SIZE, GRID_SIZE, SCREEN_SIZE};
 use crate::neural_network::{NeuralNetwork, NeuralNetworkOptions};
-use crate::snake_game::{Ate, Food, Snake};
+use crate::snake_game::{Ate, DistanceInfo, Distances, Food, Snake};
 use crate::snake_trainer::{generate_network_input, generate_new_food, generate_random_position, interpret_network_output};
 
 struct MLSnakeGameState {
@@ -20,7 +22,8 @@ struct MLSnakeGameState {
     rng: ThreadRng,
     neural_network: NeuralNetwork,
     current_score: u16,
-    stop: bool
+    stop: bool,
+    distances: Distances
 }
 
 impl MLSnakeGameState {
@@ -39,6 +42,7 @@ impl MLSnakeGameState {
 
         let current_score = 0_u16;
 
+        let distances = snake.get_distances(&food);
 
         MLSnakeGameState {
             snake,
@@ -49,7 +53,8 @@ impl MLSnakeGameState {
             current_game_index,
             weights,
             current_score,
-            stop: false
+            stop: false,
+            distances: distances
         }
     }
 }
@@ -68,6 +73,8 @@ impl EventHandler<GameError> for MLSnakeGameState {
                 self.snake.move_in_dir(move_dir);
 
                 self.snake.update_state(&self.food);
+
+                self.distances = self.snake.get_distances(&self.food);
 
                 if let Some(ate) = self.snake.get_ate() {
                     match ate {
@@ -95,6 +102,8 @@ impl EventHandler<GameError> for MLSnakeGameState {
 
                     self.food = food;
 
+                    self.current_score = 0;
+
                     self.game_over = false;
                     self.stop = false;
                 } else {
@@ -111,6 +120,8 @@ impl EventHandler<GameError> for MLSnakeGameState {
         self.snake.draw(&mut canvas);
         self.food.draw(&mut canvas);
 
+        self.draw_distances(&mut canvas)?;
+
         let mut text = graphics::Text::new(format!("Current gen: {}, current score: {}",
                                                    self.current_game_index + 1, self.current_score));
 
@@ -119,9 +130,11 @@ impl EventHandler<GameError> for MLSnakeGameState {
         canvas.draw(
             &text,
             DrawParam::new()
-                .dest(Vec2::new(5.0, 5.0))
+                .dest(Vec2::new(GAME_SCREEN_SIZE.0 + 20.0, 5.0))
                 .color(Color::from_rgb(0, 0, 0))
         );
+
+        self.draw_border(ctx, &mut canvas)?;
 
         canvas.finish(ctx)?;
 
@@ -130,13 +143,135 @@ impl EventHandler<GameError> for MLSnakeGameState {
         Ok(())
     }
 
-    fn key_down_event(&mut self, ctx: &mut Context, input: KeyInput, _repeated: bool) -> Result<(), GameError> {
+    fn key_down_event(&mut self, _ctx: &mut Context, input: KeyInput, _repeated: bool) -> Result<(), GameError> {
         if let Some(code) = input.keycode {
             match code {
                 KeyCode::Right => self.stop = true,
                 _ => {}
             }
         };
+
+        Ok(())
+    }
+}
+
+impl MLSnakeGameState {
+    fn draw_border(&self, ctx: &mut Context, canvas: &mut Canvas) -> Result<(), GameError> {
+        let thickness = 2.0;
+        let color = Color::from_rgb(0, 0, 0);
+        let top_line = Mesh::new_line(
+            ctx,
+            &[Point2::from_slice(&[0.0, 0.0]), [GAME_SCREEN_SIZE.0, 0.0].into()],
+            thickness,
+            color
+        )?;
+
+        let bottom_line = Mesh::new_line(
+            ctx,
+            &[Point2::from_slice(&[0.0, GAME_SCREEN_SIZE.1]), [GAME_SCREEN_SIZE.0, GAME_SCREEN_SIZE.1].into()],
+            thickness,
+            color
+        )?;
+
+        let left_line = Mesh::new_line(
+            ctx,
+            &[Point2::from_slice(&[0.0, 0.0]), [0.0, GAME_SCREEN_SIZE.1].into()],
+            thickness,
+            color
+        )?;
+
+        let right_line = Mesh::new_line(
+            ctx,
+            &[Point2::from_slice(&[GAME_SCREEN_SIZE.0, 0.0]), [GAME_SCREEN_SIZE.0, GAME_SCREEN_SIZE.1].into()],
+            thickness,
+            color
+        )?;
+
+        canvas.draw(&top_line, DrawParam::default());
+        canvas.draw(&left_line, DrawParam::default());
+        canvas.draw(&bottom_line, DrawParam::default());
+        canvas.draw(&right_line, DrawParam::default());
+
+        Ok(())
+    }
+
+    fn draw_distances(&self, canvas: &mut Canvas) -> Result<(), GameError> {
+        let x = GAME_SCREEN_SIZE.0 + 50.0;
+
+        let mut y = 80.0;
+        let head_coordinates = self.snake.get_head_coordinates();
+        let mut text = graphics::Text::new(format!("Head pos: {} {}", head_coordinates.x, head_coordinates.y));
+        text.set_scale(15.0);
+
+        canvas.draw(
+            &text,
+            DrawParam::new()
+                .dest(Vec2::new(x, y))
+                .color(Color::from_rgb(0, 0, 0))
+        );
+
+        y += 15.0 + 5.0;
+
+        let food_coordinates = self.food.get_position();
+        let mut text = graphics::Text::new(format!("Food pos: {} {}", food_coordinates.x, food_coordinates.y));
+        text.set_scale(15.0);
+
+        canvas.draw(
+            &text,
+            DrawParam::new()
+                .dest(Vec2::new(x, y))
+                .color(Color::from_rgb(0, 0, 0))
+        );
+
+        y += 15.0 + 5.0;
+
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top, "Top", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top_right, "Top right", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.right, "Right", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom_right, "Bottom right", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom, "Bottom", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom_left, "Bottom left", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.left, "Left", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top_left, "Top left", x)?;
+
+        Ok(())
+    }
+
+    fn draw_distance_info(&self, canvas: &mut Canvas, start_y: &mut f32, space_between: f32, distance: &DistanceInfo, name: &str, x: f32) -> Result<(), GameError> {
+        let mut text = graphics::Text::new(format!("{} to wall: {}", name, distance.distance_to_wall));
+        let size = 20.0;
+        text.set_scale(size);
+
+        canvas.draw(
+            &text,
+            DrawParam::new()
+                .dest(Vec2::new(x, *start_y))
+                .color(Color::from_rgb(0, 0, 0))
+        );
+
+        text = graphics::Text::new(format!("{} to apple: {}", name, distance.distance_to_apple));
+        text.set_scale(size);
+        *start_y += size + space_between;
+
+        canvas.draw(
+            &text,
+            DrawParam::new()
+                .dest(Vec2::new(x, *start_y))
+                .color(Color::from_rgb(0, 0, 0))
+        );
+
+        text = graphics::Text::new(format!("{} to body: {}", name, distance.distance_to_body));
+        text.set_scale(size);
+        *start_y += size + space_between;
+
+        canvas.draw(
+            &text,
+            DrawParam::new()
+                .dest(Vec2::new(x, *start_y))
+                .color(Color::from_rgb(0, 0, 0))
+        );
+
+        *start_y += size + 2.0 * space_between;
 
         Ok(())
     }

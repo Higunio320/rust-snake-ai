@@ -1,4 +1,3 @@
-use crate::game::play_game;
 use crate::genetic_algorithm::PopulationOptions;
 use crate::neural_network::{NeuralNetworkOptions, ReLU, Softmax};
 use crate::snake_trainer::{FIRST_LAYER_SIZE, MLSnakeOptions, SnakeTrainer};
@@ -17,8 +16,8 @@ fn main() {
         -1.0,
         1.0,
         0.9,
-        0.05,
         0.3,
+        0.5,
         2000
     );
 

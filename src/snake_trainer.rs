@@ -1,6 +1,6 @@
-use std::cmp::{max, max_by, max_by_key};
+use std::cmp::{max_by};
 use rand::{Rng, thread_rng};
-use crate::game::{GRID_SIZE, MAX_DISTANCE};
+use crate::game::{GRID_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE};
 use crate::genetic_algorithm::{Population, PopulationOptions};
 use crate::ml_game::play_game_with_ml;
 use crate::neural_network::{NeuralNetwork, NeuralNetworkOptions};
@@ -11,7 +11,7 @@ pub const OUTPUT_LAYER_SIZE: usize = 3;
 
 const MAX_STEPS_WITHOUT_APPLE: f64 = 100.0;
 
-const POINTS_BASE: f64 = 2.0;
+const POINTS_BASE: f64 = 3.0;
 
 pub struct MLSnakeOptions {
     genetic_algorithm_options: PopulationOptions,
@@ -93,7 +93,7 @@ pub fn evaluate(chromosomes: &Vec<f64>, neural_network_options: &NeuralNetworkOp
         input = generate_network_input(&snake, &food);
     }
 
-    max_by(steps + (POINTS_BASE.powf(score) + score.powf(2.1)*500.0) - (score.powf(1.2)*(steps / 4.0).powf(1.3)), 0.0, |a, b| a.total_cmp(b))
+    max_by(steps * 0.5 + POINTS_BASE.powf(score) + score.powf(2.0)*500.0, 0.0, |a, b| a.total_cmp(b))
 }
 
 pub fn generate_random_position() -> Position {
@@ -124,15 +124,15 @@ pub fn generate_network_input(snake: &Snake, food: &Food) -> Vec<f64> {
 
     let mut input = Vec::with_capacity(FIRST_LAYER_SIZE);
 
-    add_distance_to_input(distances.top, &mut input);
-    add_distance_to_input(distances.right, &mut input);
-    add_distance_to_input(distances.bottom, &mut input);
-    add_distance_to_input(distances.left, &mut input);
+    add_distance_to_input(distances.top, &mut input, MAX_Y_DISTANCE);
+    add_distance_to_input(distances.right, &mut input, MAX_X_DISTANCE);
+    add_distance_to_input(distances.bottom, &mut input, MAX_Y_DISTANCE);
+    add_distance_to_input(distances.left, &mut input, MAX_X_DISTANCE);
 
-    add_distance_to_input(distances.top_right, &mut input);
-    add_distance_to_input(distances.bottom_right, &mut input);
-    add_distance_to_input(distances.bottom_left, &mut input);
-    add_distance_to_input(distances.top_left, &mut input);
+    add_distance_to_input(distances.top_right, &mut input, *MAX_DISTANCE);
+    add_distance_to_input(distances.bottom_right, &mut input, *MAX_DISTANCE);
+    add_distance_to_input(distances.bottom_left, &mut input, *MAX_DISTANCE);
+    add_distance_to_input(distances.top_left, &mut input, *MAX_DISTANCE);
 
     match snake.get_current_direction() {
         Direction::UP => input.append(&mut vec![1.0, 0.0, 0.0, 0.0]),
@@ -151,10 +151,10 @@ pub fn generate_network_input(snake: &Snake, food: &Food) -> Vec<f64> {
     input
 }
 
-fn add_distance_to_input(distance: DistanceInfo, input: &mut Vec<f64>) {
-    input.push(distance.distance_to_wall / *MAX_DISTANCE);
-    input.push(distance.distance_to_apple / *MAX_DISTANCE);
-    input.push(distance.distance_to_body / *MAX_DISTANCE);
+fn add_distance_to_input(distance: DistanceInfo, input: &mut Vec<f64>, max: f64) {
+    input.push(distance.distance_to_wall / max);
+    input.push(distance.distance_to_apple / max);
+    input.push(distance.distance_to_body / max);
 }
 
 pub enum Move {

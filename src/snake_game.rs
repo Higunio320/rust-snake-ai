@@ -3,7 +3,7 @@ use std::f64::consts::FRAC_PI_4;
 use ggez::graphics::{Canvas, Color, DrawParam, Quad, Rect};
 use ggez::input::keyboard::{KeyCode};
 use once_cell::sync::Lazy;
-use crate::game::{GRID_CELL_SIZE, GRID_SIZE, MAX_DISTANCE};
+use crate::game::{GRID_CELL_SIZE, GRID_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE};
 use crate::snake_trainer::Move;
 
 static SIN_45: Lazy<f64> = Lazy::new(|| FRAC_PI_4.sin());
@@ -11,8 +11,8 @@ static COS_45: Lazy<f64> = Lazy::new(|| FRAC_PI_4.cos());
 
 #[derive(Copy, PartialEq, Clone, Debug)]
 pub struct Position {
-    x: i16,
-    y: i16
+    pub(crate) x: i16,
+    pub(crate) y: i16
 }
 
 impl Position {
@@ -148,6 +148,10 @@ impl Food {
                 .dest_rect(self.position.into())
                 .color(color)
         );
+    }
+
+    pub fn get_position(&self) -> Position {
+        self.position
     }
 }
 
@@ -339,52 +343,52 @@ impl Snake {
         let top_body = self.body.iter()
             .filter(|segment| segment.position.x == self.head.position.x && segment.position.y < self.head.position.y)
             .max_by_key(|segment| segment.position.y)
-            .map(|seg| (self.head.position.y - seg.position.y) as f64).unwrap_or_else(|| *MAX_DISTANCE);
+            .map(|seg| (self.head.position.y - seg.position.y) as f64).unwrap_or_else(|| MAX_Y_DISTANCE);
 
         let top_apple = if food.position.x == self.head.position.x &&
             food.position.y < self.head.position.y {
             (self.head.position.y - food.position.y - 1) as f64
         } else {
-            *MAX_DISTANCE
+            MAX_Y_DISTANCE
         };
 
         let bottom_distance = (GRID_SIZE.1 - self.head.position.y - 1) as f64;
         let bottom_body = self.body.iter()
             .filter(|segment| segment.position.x == self.head.position.x && segment.position.y > self.head.position.y)
             .min_by_key(|segment| segment.position.y)
-            .map(|seg| (seg.position.y - self.head.position.y) as f64).unwrap_or_else(|| *MAX_DISTANCE);
+            .map(|seg| (seg.position.y - self.head.position.y) as f64).unwrap_or_else(|| MAX_Y_DISTANCE);
 
         let bottom_apple = if food.position.x == self.head.position.x &&
             food.position.y < self.head.position.y {
             (food.position.y - self.head.position.y - 1) as f64
         } else {
-            *MAX_DISTANCE
+            MAX_Y_DISTANCE
         };
 
         let right_distance = (GRID_SIZE.0 - self.head.position.x - 1) as f64;
         let right_body = self.body.iter()
             .filter(|segment| segment.position.x > self.head.position.x && segment.position.y == self.head.position.y)
             .min_by_key(|segment| segment.position.x)
-            .map(|seg| (seg.position.x - self.head.position.x) as f64).unwrap_or_else(|| *MAX_DISTANCE);
+            .map(|seg| (seg.position.x - self.head.position.x) as f64).unwrap_or_else(|| MAX_X_DISTANCE);
 
         let right_apple = if food.position.x > self.head.position.x &&
             food.position.y == self.head.position.y {
             (food.position.x - self.head.position.x) as f64
         } else {
-            *MAX_DISTANCE
+            MAX_X_DISTANCE
         };
 
         let left_distance = self.head.position.x as f64;
         let left_body = self.body.iter()
             .filter(|segment| segment.position.x < self.head.position.x && segment.position.y == self.head.position.y)
             .max_by_key(|segment| segment.position.x)
-            .map(|seg| (self.head.position.x - seg.position.x - 1) as f64).unwrap_or_else(|| *MAX_DISTANCE);
+            .map(|seg| (self.head.position.x - seg.position.x - 1) as f64).unwrap_or_else(|| MAX_X_DISTANCE);
 
         let left_apple = if food.position.x < self.head.position.x &&
             food.position.y == self.head.position.y {
             (self.head.position.x - food.position.x) as f64
         } else {
-            *MAX_DISTANCE
+            MAX_X_DISTANCE
         };
 
         let top: DistanceInfo = (top_distance, top_apple, top_body).into();
@@ -407,6 +411,10 @@ impl Snake {
             bottom_left,
             top_left
         }
+    }
+
+    pub fn get_head_coordinates(&self) -> Position {
+        self.head.position
     }
 
     fn get_distance_in_direction(&self, food_pos: &Position, top_bottom_dist: f64, left_right_dist: f64, vec_sin: f64, vec_cos: f64) -> DistanceInfo {
