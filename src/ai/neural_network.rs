@@ -104,7 +104,7 @@ fn calculate_output_from_layer(input: Vec<f64>, layer: &[f64], function: &Box<dy
 #[cfg(test)]
 mod test {
     use crate::ai::neural_network_utils::{Function,NeuralNetworkOptions, ReLU, Softmax};
-    use create::ai::neural_network::NeuralNetwork;
+    use crate::ai::neural_network::NeuralNetwork;
 
     #[test]
     pub fn new_neural_network_constructs_correct_network() {
