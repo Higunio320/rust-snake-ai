@@ -1,6 +1,8 @@
 use rand::{Rng, thread_rng};
 use itertools::Itertools;
 use rayon::prelude::*;
+use rand_distr::{Normal, Distribution};
+use rand_distr::num_traits::float::TotalOrder;
 
 #[derive(Clone, PartialEq)]
 struct Individual {
@@ -85,7 +87,9 @@ impl Individual {
         self.chromosomes.iter_mut()
             .for_each(|item| {
                 if rng.gen_range(0.0..=1.0) < *mutation_prob {
-                    *item += *item * rng.gen_range(-(*mutation_range)..=(*mutation_range));
+                    let mut normal = Normal::new(0.0, *mutation_range)
+                        .unwrap_or_else(|_| panic!("Bad variance: item: {}", *item));
+                    *item += normal.sample(&mut rng) * *item;
                 }
             })
     }
@@ -138,8 +142,8 @@ impl Population {
             .for_each(|individual| individual.evaluate(&evaluation_function, args));
     }
 
-    fn selection(&self) -> Vec<Individual> {
-        let evaluation_sum: f64 = self.individuals.iter()
+    fn selection(&mut self) -> Vec<Individual> {
+         let evaluation_sum: f64 = self.individuals.iter()
             .map(|individual| individual.evaluation)
             .sum();
 
@@ -185,9 +189,6 @@ impl Population {
             }
         }
 
-        // println!("Population evals: {:?}, new population evals: {:?}", self.individuals.iter().map(|indiv| indiv.evaluation)
-        //     .collect::<Vec<f64>>(), new_population.iter().map(|indiv| indiv.evaluation).collect::<Vec<f64>>());
-
         new_population
     }
 
@@ -214,8 +215,6 @@ impl Population {
             .map(|(first, second)| first.cross(second))
             .flat_map(|(first, second)| vec![first, second])
             .collect();
-
-
 
         individuals_not_to_cross.append(&mut crossed_individuals);
 

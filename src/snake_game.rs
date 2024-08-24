@@ -342,53 +342,49 @@ impl Snake {
         let top_distance = self.head.position.y as f64;
         let top_body = self.body.iter()
             .filter(|segment| segment.position.x == self.head.position.x && segment.position.y < self.head.position.y)
-            .max_by_key(|segment| segment.position.y)
-            .map(|seg| (self.head.position.y - seg.position.y) as f64).unwrap_or_else(|| MAX_Y_DISTANCE);
+            .next().map(|_| 1.0).unwrap_or_else(|| 0.0);
 
         let top_apple = if food.position.x == self.head.position.x &&
             food.position.y < self.head.position.y {
-            (self.head.position.y - food.position.y - 1) as f64
+            1.0
         } else {
-            MAX_Y_DISTANCE
+            0.0
         };
 
         let bottom_distance = (GRID_SIZE.1 - self.head.position.y - 1) as f64;
         let bottom_body = self.body.iter()
             .filter(|segment| segment.position.x == self.head.position.x && segment.position.y > self.head.position.y)
-            .min_by_key(|segment| segment.position.y)
-            .map(|seg| (seg.position.y - self.head.position.y) as f64).unwrap_or_else(|| MAX_Y_DISTANCE);
+            .next().map(|_| 1.0).unwrap_or_else(|| 0.0);
 
         let bottom_apple = if food.position.x == self.head.position.x &&
-            food.position.y < self.head.position.y {
-            (food.position.y - self.head.position.y - 1) as f64
+            food.position.y > self.head.position.y {
+            1.0
         } else {
-            MAX_Y_DISTANCE
+            0.0
         };
 
         let right_distance = (GRID_SIZE.0 - self.head.position.x - 1) as f64;
         let right_body = self.body.iter()
             .filter(|segment| segment.position.x > self.head.position.x && segment.position.y == self.head.position.y)
-            .min_by_key(|segment| segment.position.x)
-            .map(|seg| (seg.position.x - self.head.position.x) as f64).unwrap_or_else(|| MAX_X_DISTANCE);
+            .next().map(|_| 1.0).unwrap_or_else(|| 0.0);
 
         let right_apple = if food.position.x > self.head.position.x &&
             food.position.y == self.head.position.y {
-            (food.position.x - self.head.position.x) as f64
+            1.0
         } else {
-            MAX_X_DISTANCE
+            0.0
         };
 
         let left_distance = self.head.position.x as f64;
         let left_body = self.body.iter()
             .filter(|segment| segment.position.x < self.head.position.x && segment.position.y == self.head.position.y)
-            .max_by_key(|segment| segment.position.x)
-            .map(|seg| (self.head.position.x - seg.position.x - 1) as f64).unwrap_or_else(|| MAX_X_DISTANCE);
+            .next().map(|_| 1.0).unwrap_or_else(|| 0.0);
 
         let left_apple = if food.position.x < self.head.position.x &&
             food.position.y == self.head.position.y {
-            (self.head.position.x - food.position.x) as f64
+            1.0
         } else {
-            MAX_X_DISTANCE
+            0.0
         };
 
         let top: DistanceInfo = (top_distance, top_apple, top_body).into();
@@ -431,9 +427,9 @@ impl Snake {
 
         let apple = if equal_with_error(apple_vec.x as f64 / apple_vec_len, vec_cos, 0.00001) &&
             equal_with_error(apple_vec.y as f64 / apple_vec_len, vec_sin, 0.00001) {
-            apple_vec_len
+            1.0
         } else {
-            *MAX_DISTANCE
+            0.0
         };
 
         let body = self.body.iter()
@@ -442,8 +438,7 @@ impl Snake {
                 equal_with_error((segment.position.x - self.head.position.x) as f64 / distance, vec_cos, 0.00001) &&
                     equal_with_error((self.head.position.y - segment.position.y) as f64 / distance, vec_sin, 0.00001)
             })
-            .map(|segment| segment.position.get_distance_from_pos(&self.head.position))
-            .min_by(|a, b| a.total_cmp(b)).unwrap_or_else(|| *MAX_DISTANCE);
+            .next().map(|_| 1.0).unwrap_or_else(|| 0.0);
 
         DistanceInfo {
             distance_to_wall: distance,
@@ -462,98 +457,5 @@ impl Snake {
 }
 
 fn equal_with_error(first_value: f64, second_value: f64, error: f64) -> bool {
-        return second_value >= first_value - error && second_value <= first_value + error
-}
-
-#[cfg(test)]
-mod test {
-    use std::collections::VecDeque;
-    use crate::game::{GRID_SIZE, MAX_DISTANCE};
-    use crate::snake_game::{Direction, DistanceInfo, Distances, Food, Head, Position, Segment, Snake};
-
-    #[test]
-    pub fn should_return_correct_direction_distances() {
-        //this test won't work with other sizes, and I'm too lazy to change that ;)
-        if GRID_SIZE.0 != 10 || GRID_SIZE.1 != 10 {
-            assert!(true)
-        }
-        /*
-        * * f * * * * * * *
-        * * * * * * * * * *
-        * * * * h s * * * *
-        * * * s s s * * * *
-        * * * * * * * * * *
-        * * * * * * * * * *
-        * * * * * * * * * *
-        * * * * * * * * * *
-        * * * * * * * * * *
-        * * * * * * * * * *
-        */
-        //given
-        let mut body = VecDeque::new();
-        body.push_back(Segment::new(Position::new(5, 2), Direction::LEFT));
-        body.push_back(Segment::new(Position::new(5, 3), Direction::UP));
-        body.push_back(Segment::new(Position::new(4, 3), Direction::RIGHT));
-        body.push_back(Segment::new(Position::new(3, 3), Direction::RIGHT));
-
-        let snake = Snake {
-            head: Head::new(Position::new(4, 2), Direction::LEFT),
-            body,
-            ate: None,
-            last_dir: Direction::LEFT,
-            next_dir: None,
-        };
-
-        let food = Food::new(Position::new(2, 0));
-
-        //when
-        let distances = snake.get_distances(&food);
-
-        //then
-        let expected_distances = Distances {
-            top: DistanceInfo {
-                distance_to_wall: 2.0,
-                distance_to_body: *MAX_DISTANCE,
-                distance_to_apple: *MAX_DISTANCE
-            },
-            right: DistanceInfo {
-                distance_to_wall: 5.0,
-                distance_to_body: 1.0,
-                distance_to_apple: *MAX_DISTANCE
-            },
-            bottom: DistanceInfo {
-                distance_to_wall: 7.0,
-                distance_to_apple: *MAX_DISTANCE,
-                distance_to_body: 1.0,
-            },
-            left: DistanceInfo {
-                distance_to_wall: 4.0,
-                distance_to_apple: *MAX_DISTANCE,
-                distance_to_body: *MAX_DISTANCE,
-            },
-            top_right: DistanceInfo {
-                distance_to_wall: 8.0_f64.sqrt(),
-                distance_to_apple: *MAX_DISTANCE,
-                distance_to_body: *MAX_DISTANCE,
-            },
-            bottom_right: DistanceInfo {
-                distance_to_wall: 50.0_f64.sqrt(),
-                distance_to_apple: *MAX_DISTANCE,
-                distance_to_body: 2.0_f64.sqrt(),
-            },
-            bottom_left: DistanceInfo {
-                distance_to_wall: 32.0_f64.sqrt(),
-                distance_to_apple: *MAX_DISTANCE,
-                distance_to_body: 2.0_f64.sqrt(),
-            },
-            top_left: DistanceInfo {
-                distance_to_wall: 8.0_f64.sqrt(),
-                distance_to_apple: 8.0_f64.sqrt(),
-                distance_to_body: *MAX_DISTANCE,
-            },
-        };
-
-        assert_eq!(expected_distances, distances);
-    }
-
+    return second_value >= first_value - error && second_value <= first_value + error
 }

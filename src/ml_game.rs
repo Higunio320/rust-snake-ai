@@ -1,14 +1,13 @@
-use std::fmt::format;
 use ggez::event::EventHandler;
 use ggez::{Context, ContextBuilder, event, GameError, GameResult, graphics};
 use ggez::conf::{WindowMode, WindowSetup};
 use ggez::glam::Vec2;
-use ggez::graphics::{Canvas, Color, DrawParam, FontData, Mesh};
+use ggez::graphics::{Canvas, Color, DrawParam, Mesh};
 use ggez::input::keyboard::{KeyCode, KeyInput};
 use ggez::mint::Point2;
 use rand::prelude::ThreadRng;
 use rand::thread_rng;
-use crate::game::{FPS, GAME_SCREEN_SIZE, GRID_SIZE, SCREEN_SIZE};
+use crate::game::{FPS, GAME_SCREEN_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE, SCREEN_SIZE};
 use crate::neural_network::{NeuralNetwork, NeuralNetworkOptions};
 use crate::snake_game::{Ate, DistanceInfo, Distances, Food, Snake};
 use crate::snake_trainer::{generate_network_input, generate_new_food, generate_random_position, interpret_network_output};
@@ -54,7 +53,7 @@ impl MLSnakeGameState {
             weights,
             current_score,
             stop: false,
-            distances: distances
+            distances
         }
     }
 }
@@ -225,20 +224,20 @@ impl MLSnakeGameState {
 
         y += 15.0 + 5.0;
 
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top, "Top", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top_right, "Top right", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.right, "Right", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom_right, "Bottom right", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom, "Bottom", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom_left, "Bottom left", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.left, "Left", x)?;
-        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top_left, "Top left", x)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top, "Top", x, MAX_Y_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top_right, "Top right", x, *MAX_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.right, "Right", x, MAX_X_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom_right, "Bottom right", x, *MAX_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom, "Bottom", x, MAX_Y_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.bottom_left, "Bottom left", x, *MAX_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.left, "Left", x, MAX_X_DISTANCE)?;
+        self.draw_distance_info(canvas, &mut y, 5.0, &self.distances.top_left, "Top left", x, *MAX_DISTANCE)?;
 
         Ok(())
     }
 
-    fn draw_distance_info(&self, canvas: &mut Canvas, start_y: &mut f32, space_between: f32, distance: &DistanceInfo, name: &str, x: f32) -> Result<(), GameError> {
-        let mut text = graphics::Text::new(format!("{} to wall: {}", name, distance.distance_to_wall));
+    fn draw_distance_info(&self, canvas: &mut Canvas, start_y: &mut f32, space_between: f32, distance: &DistanceInfo, name: &str, x: f32, max: f64) -> Result<(), GameError> {
+        let mut text = graphics::Text::new(format!("{} to wall: {}", name, distance.distance_to_wall / max));
         let size = 20.0;
         text.set_scale(size);
 

@@ -1,5 +1,6 @@
 use std::cmp::{max_by};
 use rand::{Rng, thread_rng};
+use rand_distr::num_traits::float::TotalOrder;
 use crate::game::{GRID_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE};
 use crate::genetic_algorithm::{Population, PopulationOptions};
 use crate::ml_game::play_game_with_ml;
@@ -9,9 +10,9 @@ use crate::snake_game::{Ate, Direction, DistanceInfo, Food, Position, Snake};
 pub const FIRST_LAYER_SIZE: usize = 32;
 pub const OUTPUT_LAYER_SIZE: usize = 3;
 
-const MAX_STEPS_WITHOUT_APPLE: f64 = 100.0;
+const MAX_STEPS_WITHOUT_APPLE: f64 = 150.0;
 
-const POINTS_BASE: f64 = 3.0;
+const POINTS_BASE: f64 = 2.0;
 
 pub struct MLSnakeOptions {
     genetic_algorithm_options: PopulationOptions,
@@ -93,7 +94,7 @@ pub fn evaluate(chromosomes: &Vec<f64>, neural_network_options: &NeuralNetworkOp
         input = generate_network_input(&snake, &food);
     }
 
-    max_by(steps * 0.5 + POINTS_BASE.powf(score) + score.powf(2.0)*500.0, 0.0, |a, b| a.total_cmp(b))
+    max_by(steps + POINTS_BASE.powf(score) + score.powf(2.1)*500.0 - (score.powf(1.2) * (steps * 0.25).powf(1.3)), 0.0, |a, b| a.total_cmp(b))
 }
 
 pub fn generate_random_position() -> Position {
@@ -153,8 +154,8 @@ pub fn generate_network_input(snake: &Snake, food: &Food) -> Vec<f64> {
 
 fn add_distance_to_input(distance: DistanceInfo, input: &mut Vec<f64>, max: f64) {
     input.push(distance.distance_to_wall / max);
-    input.push(distance.distance_to_apple / max);
-    input.push(distance.distance_to_body / max);
+    input.push(distance.distance_to_apple);
+    input.push(distance.distance_to_body);
 }
 
 pub enum Move {
