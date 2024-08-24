@@ -7,10 +7,11 @@ use ggez::input::keyboard::{KeyCode, KeyInput};
 use ggez::mint::Point2;
 use rand::prelude::ThreadRng;
 use rand::thread_rng;
-use crate::game::{FPS, GAME_SCREEN_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE, SCREEN_SIZE};
-use crate::neural_network::{NeuralNetwork, NeuralNetworkOptions};
-use crate::snake_game::{Ate, DistanceInfo, Distances, Food, Snake};
-use crate::snake_trainer::{generate_network_input, generate_new_food, generate_random_position, interpret_network_output};
+use crate::ai::neural_network::NeuralNetwork;
+use crate::ai::neural_network_utils::NeuralNetworkOptions;
+use crate::ai::snake_trainer::{generate_network_input, generate_new_food, generate_random_position, interpret_network_output};
+use crate::snake::snake_game::{Ate, DistanceInfo, Distances, Food, Snake};
+use crate::visualisation::game_constants::{FPS, GAME_SCREEN_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE, SCREEN_SIZE};
 
 struct MLSnakeGameState {
     current_game_index: usize,

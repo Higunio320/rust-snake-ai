@@ -1,13 +1,10 @@
-use crate::genetic_algorithm::PopulationOptions;
-use crate::neural_network::{NeuralNetworkOptions, ReLU, Softmax};
-use crate::snake_trainer::{FIRST_LAYER_SIZE, MLSnakeOptions, SnakeTrainer};
+use crate::ai::genetic_algorithm::PopulationOptions;
+use crate::ai::neural_network_utils::{NeuralNetworkOptions, ReLU, Softmax};
+use crate::ai::snake_trainer::{MLSnakeOptions, SnakeTrainer, FIRST_LAYER_SIZE};
 
-mod snake_game;
-mod game;
-mod neural_network;
-mod genetic_algorithm;
-mod snake_trainer;
-mod ml_game;
+mod visualisation;
+mod ai;
+mod snake;
 
 fn main() {
     let population_options = PopulationOptions::new(

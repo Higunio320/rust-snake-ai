@@ -2,7 +2,6 @@ use rand::{Rng, thread_rng};
 use itertools::Itertools;
 use rayon::prelude::*;
 use rand_distr::{Normal, Distribution};
-use rand_distr::num_traits::float::TotalOrder;
 
 #[derive(Clone, PartialEq)]
 struct Individual {

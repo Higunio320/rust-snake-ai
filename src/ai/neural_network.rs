@@ -1,80 +1,11 @@
-use std::fmt::{Debug};
 use rand::{Rng, thread_rng};
+use crate::ai::neural_network_utils::{Function,NeuralNetworkOptions};
+
 
 pub(crate) struct NeuralNetwork {
     layers_weights: Vec<f64>,
     layers_functions: Vec<Box<dyn Function>>,
     layers_sizes_vec: Vec<u16>
-}
-
-
-pub trait Function: Debug + FunctionClone + Sync {
-    fn apply(&self, input: &mut Vec<f64>);
-}
-
-pub trait FunctionClone {
-    fn clone_box(&self) -> Box<dyn Function>;
-}
-
-impl<T> FunctionClone for T
-where
-    T: 'static + Function + Clone,
-{
-    fn clone_box(&self) -> Box<dyn Function> {
-        Box::new(self.clone())
-    }
-}
-
-impl Clone for Box<dyn Function> {
-    fn clone(&self) -> Box<dyn Function> {
-        self.clone_box()
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct ReLU;
-
-impl Function for ReLU {
-    fn apply(&self, input: &mut Vec<f64>) {
-        for number in input.iter_mut() {
-            if *number < 0.0 {
-                *number = 0.0;
-            }
-        }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub struct Softmax;
-
-impl Function for Softmax {
-    fn apply(&self, input: &mut Vec<f64>) {
-        let (exps, sum): (Vec<f64>, f64) = input.iter()
-            .map(|number| number.exp())
-            .fold((Vec::with_capacity(input.len()), 0.0), |(mut exps, sum), exp| {
-                exps.push(exp);
-                (exps, sum + exp)
-            });
-
-        for(i, number) in input.iter_mut().enumerate() {
-            *number = exps[i] / sum;
-        }
-    }
-}
-
-#[derive(Clone)]
-pub struct NeuralNetworkOptions {
-    layers_sizes_vec: Vec<u16>,
-    layers_functions: Vec<Box<dyn Function>>
-}
-
-impl NeuralNetworkOptions {
-    pub fn new(layers_sizes_vec: Vec<u16>, layers_functions: Vec<Box<dyn Function>>) -> Self {
-        NeuralNetworkOptions {
-            layers_sizes_vec,
-            layers_functions
-        }
-    }
 }
 
 impl NeuralNetwork {
@@ -172,7 +103,8 @@ fn calculate_output_from_layer(input: Vec<f64>, layer: &[f64], function: &Box<dy
 
 #[cfg(test)]
 mod test {
-    use crate::neural_network::{Function, NeuralNetwork, NeuralNetworkOptions, ReLU, Softmax};
+    use crate::ai::neural_network_utils::{Function,NeuralNetworkOptions, ReLU, Softmax};
+    use create::ai::neural_network::NeuralNetwork;
 
     #[test]
     pub fn new_neural_network_constructs_correct_network() {

@@ -3,8 +3,8 @@ use std::f64::consts::FRAC_PI_4;
 use ggez::graphics::{Canvas, Color, DrawParam, Quad, Rect};
 use ggez::input::keyboard::{KeyCode};
 use once_cell::sync::Lazy;
-use crate::game::{GRID_CELL_SIZE, GRID_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE};
-use crate::snake_trainer::Move;
+use crate::ai::snake_trainer::Move;
+use crate::visualisation::game_constants::{GRID_CELL_SIZE,GRID_SIZE};
 
 static SIN_45: Lazy<f64> = Lazy::new(|| FRAC_PI_4.sin());
 static COS_45: Lazy<f64> = Lazy::new(|| FRAC_PI_4.cos());

@@ -1,11 +1,11 @@
 use std::cmp::{max_by};
 use rand::{Rng, thread_rng};
-use rand_distr::num_traits::float::TotalOrder;
-use crate::game::{GRID_SIZE, MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE};
-use crate::genetic_algorithm::{Population, PopulationOptions};
-use crate::ml_game::play_game_with_ml;
-use crate::neural_network::{NeuralNetwork, NeuralNetworkOptions};
-use crate::snake_game::{Ate, Direction, DistanceInfo, Food, Position, Snake};
+use crate::ai::genetic_algorithm::{Population, PopulationOptions};
+use crate::ai::neural_network::NeuralNetwork;
+use crate::ai::neural_network_utils::NeuralNetworkOptions;
+use crate::snake::snake_game::{Ate, Direction, DistanceInfo, Food, Position, Snake};
+use crate::visualisation::game_constants::{MAX_DISTANCE, MAX_X_DISTANCE, MAX_Y_DISTANCE, GRID_SIZE};
+use crate::visualisation::ml_game::play_game_with_ml;
 
 pub const FIRST_LAYER_SIZE: usize = 32;
 pub const OUTPUT_LAYER_SIZE: usize = 3;
